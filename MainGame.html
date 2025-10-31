@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Pertarungan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #2c3e50;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: #ecf0f1;
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .game-info {
+            background: #3498db;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .turn-info {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .players {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .player-card {
+            background: #e74c3c;
+            border-radius: 15px;
+            padding: 25px;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s;
+            border: 3px solid transparent;
+        }
+
+        .player-card.active {
+            border-color: #f1c40f;
+            transform: scale(1.02);
+        }
+
+        .player-card.player2 {
+            background: #3498db;
+        }
+
+        .player-name {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .stats {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .cooldown-indicator {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            min-height: 32px;
+        }
+
+        .energy-bar-container {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            height: 30px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .energy-bar {
+            height: 100%;
+            background: #27ae60;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .energy-bar.low {
+            background: #e67e22;
+        }
+
+        .energy-bar.critical {
+            background: #c0392b;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 100px;
+            position: relative;
+        }
+
+        .btn-makan {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-makan:hover:not(:disabled) {
+            background: #229954;
+            transform: scale(1.05);
+        }
+
+        .btn-makan:disabled {
+            background: #95a5a6;
+        }
+
+        .btn-damage {
+            background: #c0392b;
+            color: white;
+        }
+
+        .btn-damage:hover:not(:disabled) {
+            background: #a93226;
+            transform: scale(1.05);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            white-space: nowrap;
+            margin-bottom: 5px;
+            display: none;
+        }
+
+        button:disabled:hover .tooltip {
+            display: block;
+        }
+
+        .log-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 30px;
+            border: 2px solid #bdc3c7;
+        }
+
+        .log-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .log-entry {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            background: #ecf0f1;
+            border-left: 4px solid #3498db;
+            animation: slideIn 0.3s ease;
+            font-size: 0.95em;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .log-entry.damage {
+            border-left-color: #e74c3c;
+        }
+
+        .log-entry.heal {
+            border-left-color: #27ae60;
+        }
+
+        .log-entry.info {
+            border-left-color: #f39c12;
+        }
+
+        .inventory-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #bdc3c7;
+        }
+
+        .inventory-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .player-inventory {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .player-inventory.player1 {
+            border-left: 4px solid #e74c3c;
+        }
+
+        .player-inventory.player2 {
+            border-left: 4px solid #3498db;
+        }
+
+        .inventory-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #2c3e50;
+        }
+
+        .potion-items {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .potion-item {
+            width: 40px;
+            height: 40px;
+            background: #9b59b6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .potion-item:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 10px rgba(155, 89, 182, 0.4);
+        }
+
+        .potion-item.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .potion-item.disabled:hover {
+            transform: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .potion-item.used {
+            background: #95a5a6;
+            opacity: 0.5;
+        }
+
+        .game-over {
+            text-align: center;
+            padding: 20px;
+            background: #f39c12;
+            border-radius: 10px;
+            color: white;
+            margin-top: 20px;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .reset-btn {
+            display: block;
+            margin: 20px auto 0;
+            background: #34495e;
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.1em;
+        }
+
+        .reset-btn:hover {
+            background: #2c3e50;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>⚔️ Game Pertarungan ⚔️</h1>
+        
+        <div class="game-info">
+            <div class="turn-info" id="turnInfo">Giliran: Pemain 1 (Dor)</div>
+        </div>
+
+        <div class="players">
+            <div class="player-card active" id="card1">
+                <div class="player-name">Pemain 1: Dor</div>
+                <div class="energy-bar-container">
+                    <div class="energy-bar" id="energi1" style="width: 100%">
+                        <span>100%</span>
+                    </div>
+                </div>
+                <div class="stats">
+                    <div class="stat-row">
+                        <span>⚔️ Serangan:</span>
+                        <span>20-25</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>🍖 Heal:</span>
+                        <span>15-25</span>
+                    </div>
+                </div>
+                <div class="cooldown-indicator" id="cooldown1"></div>
+                <div class="actions">
+                    <button class="btn-makan" id="btnMakan1" onclick="aksiMakan('pemain1')">
+                        🍖 Makan
+                        <span class="tooltip">Energi harus < 75%</span>
+                    </button>
+                    <button class="btn-damage" onclick="aksiDamage('pemain1', 'pemain2')">⚔️ Serang</button>
+                </div>
+            </div>
+
+            <div class="player-card player2" id="card2">
+                <div class="player-name">Pemain 2: Shesss</div>
+                <div class="energy-bar-container">
+                    <div class="energy-bar" id="energi2" style="width: 100%">
+                        <span>100%</span>
+                    </div>
+                </div>
+                <div class="stats">
+                    <div class="stat-row">
+                        <span>⚔️ Serangan:</span>
+                        <span>20-25</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>🍖 Heal:</span>
+                        <span>15-25</span>
+                    </div>
+                </div>
+                <div class="cooldown-indicator" id="cooldown2"></div>
+                <div class="actions">
+                    <button class="btn-makan" id="btnMakan2" onclick="aksiMakan('pemain2')" disabled>
+                        🍖 Makan
+                        <span class="tooltip">Energi harus < 75%</span>
+                    </button>
+                    <button class="btn-damage" onclick="aksiDamage('pemain2', 'pemain1')" disabled>⚔️ Serang</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="inventory-section">
+            <div class="inventory-title">🎒 Inventory Potion</div>
+            <div class="inventory-grid">
+                <div class="player-inventory player1">
+                    <div class="inventory-header">Pemain 1: Dor</div>
+                    <div class="potion-items" id="potionInventory1"></div>
+                </div>
+                <div class="player-inventory player2">
+                    <div class="inventory-header">Pemain 2: Shesss</div>
+                    <div class="potion-items" id="potionInventory2"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-container">
+            <div class="log-title">📋 Log Pertarungan</div>
+            <div id="log"></div>
+        </div>
+
+        <div id="gameOverMessage"></div>
+    </div>
+
+    <script>
+        function Pemain(nama, energi) {
+            let pemain = {};
+            pemain.nama = nama;
+            pemain.energi = energi;
+            pemain.maxEnergi = energi;
+            pemain.makanCooldown = 0;
+            pemain.potions = [
+                { type: 'low', available: true },
+                { type: 'low', available: true }
+            ];
+
+            pemain.makan = function (porsi) {
+                this.energi += porsi;
+                if (this.energi > this.maxEnergi) this.energi = this.maxEnergi;
+                this.makanCooldown = 5;
+                return { pesan: `${this.nama} makan dan memulihkan energi`, energi: this.energi };
+            }
+
+            pemain.usePotion = function(index) {
+                if (!this.potions[index] || !this.potions[index].available) return null;
+                const potion = this.potions[index];
+                let heal, healRange;
+                switch(potion.type) {
+                    case 'low': heal = Math.floor(Math.random() * 6) + 5; healRange = '5-10'; break;
+                    case 'medium': heal = Math.floor(Math.random() * 11) + 10; healRange = '10-20'; break;
+                    case 'high': heal = Math.floor(Math.random() * 16) + 20; healRange = '20-35'; break;
+                }
+                this.energi += heal;
+                if (this.energi > this.maxEnergi) this.energi = this.maxEnergi;
+                this.potions[index].available = false;
+                return { pesan: `${this.nama} menggunakan ${potion.type} potion`, energi: this.energi, heal: heal, type: potion.type, healRange: healRange };
+            }
+
+            pemain.getAvailablePotionCount = function() {
+                return this.potions.filter(p => p.available === true).length;
+            }
+
+            pemain.addRandomPotion = function() {
+                const random = Math.random();
+                let type = random < 0.5 ? 'low' : random < 0.85 ? 'medium' : 'high';
+                this.potions.push({ type: type, available: true });
+                return type;
+            }
+
+            pemain.damage = function(attack) {
+                this.energi -= attack;
+                if (this.energi < 0) this.energi = 0;
+                return { pesan: `${this.nama} terkena serangan`, energi: this.energi };
+            }
+
+            pemain.updateCooldown = function() {
+                if (this.makanCooldown > 0) this.makanCooldown--;
+            }
+
+            return pemain;
+        }
+
+        let pemain1 = Pemain('Dor', 100);
+        let pemain2 = Pemain('Shesss', 100);
+        let gameOver = false;
+        let currentTurn = 'pemain1';
+        let roundCounter = 0;
+
+        function tambahLog(pesan, tipe) {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${tipe}`;
+            entry.textContent = pesan;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+
+        function updateEnergi(pemainKey) {
+            const pemain = pemainKey === 'pemain1' ? pemain1 : pemain2;
+            const nomor = pemainKey === 'pemain1' ? '1' : '2';
+            const persentase = (pemain.energi / pemain.maxEnergi) * 100;
+            const energiBar = document.getElementById(`energi${nomor}`);
+            energiBar.style.width = `${persentase}%`;
+            energiBar.innerHTML = `<span>${Math.round(persentase)}%</span>`;
+            energiBar.className = 'energy-bar';
+            if (persentase <= 25) energiBar.classList.add('critical');
+            else if (persentase <= 50) energiBar.classList.add('low');
+        }
+
+        function updatePotionInventory(pemainKey) {
+            const pemain = pemainKey === 'pemain1' ? pemain1 : pemain2;
+            const nomor = pemainKey === 'pemain1' ? '1' : '2';
+            const inventoryDiv = document.getElementById(`potionInventory${nomor}`);
+            const persentase = (pemain.energi / pemain.maxEnergi) * 100;
+            const canUsePotion = persentase < 80 && currentTurn === pemainKey;
+            inventoryDiv.innerHTML = '';
+            pemain.potions.forEach((potion, index) => {
+                const potionDiv = document.createElement('div');
+                potionDiv.className = 'potion-item';
+                let emoji, color;
+                switch(potion.type) {
+                    case 'low': emoji = '🧪'; color = '#9b59b6'; break;
+                    case 'medium': emoji = '💊'; color = '#3498db'; break;
+                    case 'high': emoji = '⚗️'; color = '#e74c3c'; break;
+                }
+                potionDiv.textContent = emoji;
+                potionDiv.style.background = color;
+                if (!potion.available) potionDiv.classList.add('used');
+                else if (!canUsePotion) potionDiv.classList.add('disabled');
+                else potionDiv.onclick = () => aksiPotion(pemainKey, index);
+                potionDiv.title = `${potion.type.charAt(0).toUpperCase() + potion.type.slice(1)} Potion`;
+                inventoryDiv.appendChild(potionDiv);
+            });
+        }
+
+        function updateCooldownDisplay(pemainKey) {
+            const pemain = pemainKey === 'pemain1' ? pemain1 : pemain2;
+            const nomor = pemainKey === 'pemain1' ? '1' : '2';
+            const cooldownDiv = document.getElementById(`cooldown${nomor}`);
+            cooldownDiv.textContent = pemain.makanCooldown > 0 ? `⏱️ Cooldown Makan: ${pemain.makanCooldown} giliran` : '';
+        }
+
+        function canEat(pemainKey) {
+            const pemain = pemainKey === 'pemain1' ? pemain1 : pemain2;
+            const persentase = (pemain.energi / pemain.maxEnergi) * 100;
+            return persentase < 75 && pemain.makanCooldown === 0;
+        }
+
+        function updateButtonStates() {
+            const btnMakan1 = document.getElementById('btnMakan1');
+            const btnMakan2 = document.getElementById('btnMakan2');
+            if (currentTurn === 'pemain1') btnMakan1.disabled = !canEat('pemain1');
+            else btnMakan2.disabled = !canEat('pemain2');
+            updatePotionInventory('pemain1');
+            updatePotionInventory('pemain2');
+        }
+
+        function gantiGiliran() {
+            pemain1.updateCooldown();
+            pemain2.updateCooldown();
+            if (!gameOver) {
+                currentTurn = currentTurn === 'pemain1' ? 'pemain2' : 'pemain1';
+                roundCounter++;
+                if (roundCounter % 6 === 0) {
+                    const type1 = pemain1.addRandomPotion();
+                    const type2 = pemain2.addRandomPotion();
+                    const typeNames = {
+                        'low': 'Low Potion 🧪 (5-10 HP)',
+                        'medium': 'Medium Potion 💊 (10-20 HP)',
+                        'high': 'High Potion ⚗️ (20-35 HP)'
+                    };
+                    tambahLog(`🎁 Item Drop! Dor mendapat ${typeNames[type1]}`, 'heal');
+                    tambahLog(`🎁 Item Drop! Shesss mendapat ${typeNames[type2]}`, 'heal');
+                    updatePotionInventory('pemain1');
+                    updatePotionInventory('pemain2');
+                }
+                updateTurnUI();
+                updateCooldownDisplay('pemain1');
+                updateCooldownDisplay('pemain2');
+                updateButtonStates();
+            }
+        }
+
+        function updateTurnUI() {
+            const nama = currentTurn === 'pemain1' ? 'Dor' : 'Shesss';
+            const nomor = currentTurn === 'pemain1' ? '1' : '2';
+            document.getElementById('turnInfo').textContent = `Giliran: Pemain ${nomor} (${nama})`;
+            document.getElementById('card1').classList.toggle('active', currentTurn === 'pemain1');
+            document.getElementById('card2').classList.toggle('active', currentTurn === 'pemain2');
+            const buttons1 = document.querySelectorAll('#card1 button');
+            const buttons2 = document.querySelectorAll('#card2 button');
+            buttons1.forEach(btn => { if (!btn.classList.contains('reset-btn')) btn.disabled = currentTurn !== 'pemain1'; });
+            buttons2.forEach(btn => { if (!btn.classList.contains('reset-btn')) btn.disabled = currentTurn !== 'pemain2'; });
+            updateButtonStates();
+        }
+
+        function aksiMakan(pemainKey) {
+            if (gameOver || currentTurn !== pemainKey) return;
+            const pemain = pemainKey === 'pemain1' ? pemain1 : pemain2;
+            if (!canEat(pemainKey)) {
+                const persentase = (pemain.energi / pemain.maxEnergi) * 100;
+                if (persentase >= 75) tambahLog(`${pemain.nama} tidak bisa makan! Energi masih di atas 75%`, 'info');
+                else if (pemain.makanCooldown > 0) tambahLog(`${pemain.nama} tidak bisa makan! Masih cooldown ${pemain.makanCooldown} giliran`, 'info');
+                return;
+            }
+            const porsi = Math.floor(Math.random() * 11) + 15;
+            const hasil = pemain.makan(porsi);
+            tambahLog(`${hasil.pesan} (+${porsi} energi) ➜ Energi: ${hasil.energi} [Cooldown: 5 giliran]`, 'heal');
+            updateEnergi(pemainKey);
+            updateCooldownDisplay(pemainKey);
+            gantiGiliran();
+        }
+
+        function aksiPotion(pemainKey, potionIndex) {
+            if (gameOver || currentTurn !== pemainKey) return;
+            const pemain = pemainKey === 'pemain1' ? pemain1 : pemain2;
+            const persentase = (pemain.energi / pemain.maxEnergi) * 100;
+            if (persentase >= 80) {
+                tambahLog(`${pemain.nama} tidak bisa pakai potion! Energi masih di atas 80%`, 'info');
+                return;
+            }
+            if (!pemain.potions[potionIndex] || !pemain.potions[potionIndex].available) {
+                tambahLog(`${pemain.nama} potion sudah digunakan!`, 'info');
+                return;
+            }
+            const hasil = pemain.usePotion(potionIndex);
+            if (hasil) {
+                const sisaPotion = pemain.getAvailablePotionCount();
+                tambahLog(`${hasil.pesan} (+${hasil.heal} energi, range: ${hasil.healRange}) ➜ Energi: ${hasil.energi} [Sisa potion: ${sisaPotion}]`, 'heal');
+                updateEnergi(pemainKey);
+                updatePotionInventory(pemainKey);
+            }
+        }
+
+        function aksiDamage(penyerangKey, targetKey) {
+            if (gameOver || currentTurn !== penyerangKey) return;
+            const penyerang = penyerangKey === 'pemain1' ? pemain1 : pemain2;
+            const target = targetKey === 'pemain1' ? pemain1 : pemain2;
+            const attack = Math.floor(Math.random() * 6) + 20;
+            const hasil = target.damage(attack);
+            tambahLog(`${penyerang.nama} menyerang ${target.nama}! (-${attack} energi) ➜ Energi: ${hasil.energi}`, 'damage');
+            updateEnergi(targetKey);
+            if (target.energi <= 0) {
+                gameOver = true;
+                document.getElementById('gameOverMessage').innerHTML = `
+                    <div class="game-over">🏆 ${penyerang.nama} MENANG! 🏆<br>${target.nama} telah kalah!</div>
+                    <button class="reset-btn" onclick="resetGame()">🔄 Main Lagi</button>
+                `;
+                document.querySelectorAll('button:not(.reset-btn)').forEach(btn => btn.disabled = true);
+            } else {
+                gantiGiliran();
+            }
+        }
+
+        function resetGame() {
+            pemain1 = Pemain('Dor', 100);
+            pemain2 = Pemain('Shesss', 100);
+            gameOver = false;
+            currentTurn = 'pemain1';
+            roundCounter = 0;
+            updateEnergi('pemain1');
+            updateEnergi('pemain2');
+            updateCooldownDisplay('pemain1');
+            updateCooldownDisplay('pemain2');
+            updatePotionInventory('pemain1');
+            updatePotionInventory('pemain2');
+            updateTurnUI();
+            document.getElementById('log').innerHTML = '';
+            document.getElementById('gameOverMessage').innerHTML = '';
+            tambahLog('Game dimulai! Bertarung sampai salah satu pemain kalah!', '');
+            tambahLog('⚠️ Aturan: Makan hanya bisa jika energi < 75% dan memiliki cooldown 3 giliran', 'info');
+            tambahLog('🧪 Bonus: Setiap pemain mulai dengan 2 Low Potion. Potion bisa digunakan jika energi < 80%', 'info');
+            tambahLog('🎁 Setiap 3 round (6 giliran), kedua pemain mendapat item random!', 'info');
+        }
+
+        updateCooldownDisplay('pemain1');
+        updateCooldownDisplay('pemain2');
+        updatePotionInventory('pemain1');
+        updatePotionInventory('pemain2');
+        tambahLog('Game dimulai! Bertarung sampai salah satu pemain kalah!', '');
+        tambahLog('⚠️ Aturan: Makan hanya bisa jika energi < 75% dan memiliki cooldown 3 giliran', 'info');
+        tambahLog('🧪 Bonus: Setiap pemain mulai dengan 2 Low Potion. Potion bisa digunakan jika energi < 80%', 'info');
+        tambahLog('🎁 Setiap 3 round (6 giliran), kedua pemain mendapat item random!', 'info');
+    </script>
+</body>
+</html>
